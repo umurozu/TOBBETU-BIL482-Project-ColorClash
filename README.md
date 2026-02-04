@@ -82,7 +82,7 @@ All team members contribute to development, testing, and documentation throughou
 ├── README.md           # Project overview
 └── index.html          # Entry point
 
----
+```
 
 ## 📅 Project Status
 
