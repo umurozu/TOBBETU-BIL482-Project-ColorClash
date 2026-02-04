@@ -81,3 +81,43 @@ All team members contribute to development, testing, and documentation throughou
 ├── docs/               # Project documentation
 ├── README.md           # Project overview
 └── index.html          # Entry point
+
+---
+
+## 📅 Project Status
+
+🚧 **In Development**
+
+This project is currently under active development as part of the  
+**TOBB ETU – BIL 482 (Design Patterns)** course timeline.
+
+---
+
+## 📄 Documentation
+
+The following documents are included in the project repository:
+
+- Project Definition Document  
+- Project Plan Document  
+- Software Requirements Specification (SRS)  
+- Software Architecture Overview  
+- Pattern–Use Case Mapping  
+
+---
+
+## ⚠️ Notes
+
+- This project is developed strictly for **academic purposes**.  
+- No commercial use, monetization, or distribution is intended.  
+- Online multiplayer and AI-controlled opponents are intentionally excluded by design.  
+- The game is designed to be **child-friendly** with a low level of violence.  
+- The primary focus of the project is on **software design patterns and system architecture**, rather than advanced graphics or commercial-level gameplay.
+
+---
+
+## 📜 License
+
+This project is intended for **educational use only** within the scope of  
+**TOBB ETU coursework**.
+
+All source code, assets, and documentation are provided solely for learning, evaluation, and demonstration purposes.
