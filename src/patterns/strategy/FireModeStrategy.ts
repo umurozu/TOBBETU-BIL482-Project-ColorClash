@@ -6,7 +6,7 @@
 
 import type { IElementalMode } from './IElementalMode';
 import type { Character } from '../../entities/Character';
-import type { AttackResult, VisualConfig } from '../../types';
+import type { AttackResult, CharacterForm, VisualConfig } from '../../types';
 import { BASE_ATTACK_DAMAGE, FIRE_MODE, FIRE_VISUAL, KNOCKBACK_FORCE, HIT_STUN_DURATION } from '../../constants/GameConfig';
 
 export class FireModeStrategy implements IElementalMode {
@@ -15,8 +15,17 @@ export class FireModeStrategy implements IElementalMode {
     readonly damageMultiplier = FIRE_MODE.damageMultiplier;
     readonly defenseMultiplier = FIRE_MODE.defenseMultiplier;
     readonly attackSpeedMultiplier = FIRE_MODE.attackSpeedBonus;
+    readonly attackRangeMultiplier = 1;
+    readonly attackHeightMultiplier = 1;
+    readonly attackEffect = 'slash' as const;
+    readonly moveSpeedMultiplier = FIRE_MODE.moveSpeedMultiplier;
+    readonly jumpForceMultiplier = FIRE_MODE.jumpForceMultiplier;
+    readonly gravityMultiplier = FIRE_MODE.gravityMultiplier;
+    readonly canFly = FIRE_MODE.canFly;
+    readonly flightLift = FIRE_MODE.flightLift;
+    readonly form: CharacterForm = 'default';
 
-    attack(attacker: Character, target: Character): AttackResult {
+    attack(attacker: Character, _target: Character): AttackResult {
         // Fire mode deals 1.5x damage with strong knockback
         const baseDamage = BASE_ATTACK_DAMAGE * this.damageMultiplier;
 

@@ -17,6 +17,7 @@ export class HealthBar implements IObserver<HealthChangeEvent> {
     private displayHealth: number; // For smooth animation
     private maxHealth: number;
     private readonly playerId: PlayerId;
+    private displayName: string;
 
     // Position based on player
     private readonly x: number;
@@ -33,6 +34,7 @@ export class HealthBar implements IObserver<HealthChangeEvent> {
         this.maxHealth = maxHealth;
         this.currentHealth = maxHealth;
         this.displayHealth = maxHealth;
+        this.displayName = playerId === 'Player1' ? 'Player 1' : 'Player 2';
 
         // Position: Player1 on left, Player2 on right
         if (playerId === 'Player1') {
@@ -54,6 +56,26 @@ export class HealthBar implements IObserver<HealthChangeEvent> {
             if (data.damage > 0) {
                 this.damageFlashAlpha = 1;
             }
+        }
+    }
+
+    /**
+     * Force health values to match current character state immediately.
+     */
+    sync(currentHealth: number, maxHealth: number): void {
+        this.currentHealth = currentHealth;
+        this.maxHealth = maxHealth;
+        this.displayHealth = currentHealth;
+        this.damageFlashAlpha = 0;
+    }
+
+    /**
+     * Set HUD display name for this player.
+     */
+    setDisplayName(name: string): void {
+        const trimmed = name.trim();
+        if (trimmed.length > 0) {
+            this.displayName = trimmed;
         }
     }
 
@@ -143,9 +165,10 @@ export class HealthBar implements IObserver<HealthChangeEvent> {
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = this.playerId === 'Player1' ? 'left' : 'right';
         ctx.fillText(
-            this.playerId === 'Player1' ? 'P1' : 'P2',
+            this.displayName,
             this.playerId === 'Player1' ? this.x : this.x + HEALTH_BAR_WIDTH,
-            this.y + HEALTH_BAR_HEIGHT + 18
+            this.y + HEALTH_BAR_HEIGHT + 18,
+            HEALTH_BAR_WIDTH
         );
 
         // Health value

@@ -4,7 +4,7 @@
  */
 
 import type { Character } from '../../entities/Character';
-import type { AttackResult, VisualConfig } from '../../types';
+import type { AttackResult, CharacterForm, ElementalMode, VisualConfig } from '../../types';
 
 /**
  * Strategy interface for elemental modes
@@ -12,7 +12,7 @@ import type { AttackResult, VisualConfig } from '../../types';
  */
 export interface IElementalMode {
     /** Display name of the mode */
-    readonly name: string;
+    readonly name: ElementalMode;
 
     /** Primary color for character rendering */
     readonly color: string;
@@ -25,6 +25,33 @@ export interface IElementalMode {
 
     /** Attack speed bonus */
     readonly attackSpeedMultiplier: number;
+
+    /** Attack hitbox range multiplier */
+    readonly attackRangeMultiplier: number;
+
+    /** Attack hitbox height multiplier */
+    readonly attackHeightMultiplier: number;
+
+    /** Visual style for active attack */
+    readonly attackEffect: 'slash' | 'beam';
+
+    /** Horizontal movement multiplier */
+    readonly moveSpeedMultiplier: number;
+
+    /** Jump strength multiplier */
+    readonly jumpForceMultiplier: number;
+
+    /** Gravity modifier for this mode */
+    readonly gravityMultiplier: number;
+
+    /** Allows in-air lift when jump is held */
+    readonly canFly: boolean;
+
+    /** Upward lift force used while flying */
+    readonly flightLift: number;
+
+    /** Form variant for rendering */
+    readonly form: CharacterForm;
 
     /**
      * Execute an attack with this mode's characteristics
@@ -51,5 +78,5 @@ export interface IElementalMode {
     /**
      * Get particle type for attack effects
      */
-    getParticleType(): 'fire' | 'water';
+    getParticleType(): 'fire' | 'water' | 'earth' | 'wind' | 'light' | 'dark';
 }
