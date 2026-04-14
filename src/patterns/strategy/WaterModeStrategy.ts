@@ -6,7 +6,7 @@
 
 import type { IElementalMode } from './IElementalMode';
 import type { Character } from '../../entities/Character';
-import type { AttackResult, VisualConfig } from '../../types';
+import type { AttackResult, CharacterForm, VisualConfig } from '../../types';
 import { BASE_ATTACK_DAMAGE, WATER_MODE, WATER_VISUAL, KNOCKBACK_FORCE, HIT_STUN_DURATION } from '../../constants/GameConfig';
 
 export class WaterModeStrategy implements IElementalMode {
@@ -15,8 +15,17 @@ export class WaterModeStrategy implements IElementalMode {
     readonly damageMultiplier = WATER_MODE.damageMultiplier;
     readonly defenseMultiplier = WATER_MODE.defenseMultiplier;
     readonly attackSpeedMultiplier = WATER_MODE.attackSpeedBonus;
+    readonly attackRangeMultiplier = 1;
+    readonly attackHeightMultiplier = 1;
+    readonly attackEffect = 'slash' as const;
+    readonly moveSpeedMultiplier = WATER_MODE.moveSpeedMultiplier;
+    readonly jumpForceMultiplier = WATER_MODE.jumpForceMultiplier;
+    readonly gravityMultiplier = WATER_MODE.gravityMultiplier;
+    readonly canFly = WATER_MODE.canFly;
+    readonly flightLift = WATER_MODE.flightLift;
+    readonly form: CharacterForm = 'fluid';
 
-    attack(attacker: Character, target: Character): AttackResult {
+    attack(attacker: Character, _target: Character): AttackResult {
         // Water mode deals 0.8x damage with moderate knockback
         const baseDamage = BASE_ATTACK_DAMAGE * this.damageMultiplier;
 

@@ -45,13 +45,73 @@ export const FIRE_MODE = {
     damageMultiplier: 1.5,
     defenseMultiplier: 0.7,
     attackSpeedBonus: 1.2,
+    moveSpeedMultiplier: 1.0,
+    jumpForceMultiplier: 1.0,
+    gravityMultiplier: 1.0,
+    canFly: false,
+    flightLift: 0,
 } as const;
 
 export const WATER_MODE = {
     damageMultiplier: 0.8,
     defenseMultiplier: 1.5,
     attackSpeedBonus: 0.9,
+    moveSpeedMultiplier: 0.95,
+    jumpForceMultiplier: 1.05,
+    gravityMultiplier: 0.9,
+    canFly: false,
+    flightLift: 0,
 } as const;
+
+export const EARTH_MODE = {
+    damageMultiplier: 1.2,
+    defenseMultiplier: 1.9,
+    attackSpeedBonus: 0.8,
+    moveSpeedMultiplier: 0.8,
+    jumpForceMultiplier: 0.85,
+    gravityMultiplier: 1.1,
+    canFly: false,
+    flightLift: 0,
+} as const;
+
+export const WIND_MODE = {
+    damageMultiplier: 0.9,
+    defenseMultiplier: 1.1,
+    attackSpeedBonus: 1.4,
+    moveSpeedMultiplier: 1.35,
+    jumpForceMultiplier: 1.2,
+    gravityMultiplier: 0.45,
+    canFly: true,
+    flightLift: 180,
+} as const;
+
+export const LIGHT_MODE = {
+    damageMultiplier: 0.65,
+    defenseMultiplier: 0.9,
+    attackSpeedBonus: 1.0,
+    moveSpeedMultiplier: 1.05,
+    jumpForceMultiplier: 1.0,
+    gravityMultiplier: 0.95,
+    canFly: false,
+    flightLift: 0,
+    attackRangeMultiplier: 4.2,
+    attackHeightMultiplier: 0.45,
+} as const;
+
+export const DARK_MODE = {
+    damageMultiplier: 0.85,
+    defenseMultiplier: 2.0,
+    attackSpeedBonus: 0.85,
+    moveSpeedMultiplier: 0.9,
+    jumpForceMultiplier: 1.0,
+    gravityMultiplier: 1.0,
+    canFly: false,
+    flightLift: 0,
+    attackRangeMultiplier: 1.1,
+    attackHeightMultiplier: 1.0,
+} as const;
+
+export const ABSORBED_DAMAGE_BONUS_CAP = 35;
 
 // ============================================
 // Visual Configurations
@@ -69,6 +129,34 @@ export const WATER_VISUAL: VisualConfig = {
     secondaryColor: '#00ccff',
     glowColor: 'rgba(68, 136, 255, 0.5)',
     particleColors: ['#4488ff', '#00ccff', '#88ddff', '#0088cc'],
+};
+
+export const EARTH_VISUAL: VisualConfig = {
+    primaryColor: '#8d6e63',
+    secondaryColor: '#a1887f',
+    glowColor: 'rgba(141, 110, 99, 0.5)',
+    particleColors: ['#6d4c41', '#8d6e63', '#a1887f', '#bcaaa4'],
+};
+
+export const WIND_VISUAL: VisualConfig = {
+    primaryColor: '#b3e5fc',
+    secondaryColor: '#81d4fa',
+    glowColor: 'rgba(129, 212, 250, 0.55)',
+    particleColors: ['#e1f5fe', '#b3e5fc', '#81d4fa', '#4fc3f7'],
+};
+
+export const LIGHT_VISUAL: VisualConfig = {
+    primaryColor: '#fff59d',
+    secondaryColor: '#ffd54f',
+    glowColor: 'rgba(255, 245, 157, 0.65)',
+    particleColors: ['#fffde7', '#fff59d', '#ffe082', '#ffd54f'],
+};
+
+export const DARK_VISUAL: VisualConfig = {
+    primaryColor: '#263238',
+    secondaryColor: '#455a64',
+    glowColor: 'rgba(69, 90, 100, 0.7)',
+    particleColors: ['#263238', '#37474f', '#455a64', '#607d8b'],
 };
 
 // ============================================

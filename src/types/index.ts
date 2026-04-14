@@ -24,9 +24,11 @@ export interface Rectangle {
 
 export type PlayerId = 'Player1' | 'Player2';
 
-export type CharacterType = 'Fighter';
+export type CharacterType = 'Fighter' | 'Geomancer' | 'Eclipse';
 
-export type ElementalMode = 'Fire' | 'Water';
+export type ElementalMode = 'Fire' | 'Water' | 'Earth' | 'Wind' | 'Light' | 'Dark';
+
+export type CharacterForm = 'default' | 'armored' | 'fluid' | 'aerial';
 
 export type Direction = 'left' | 'right' | 'up' | 'down' | 'none';
 
@@ -76,7 +78,7 @@ export interface VisualConfig {
     particleColors: string[];
 }
 
-export type ParticleType = 'fire' | 'water' | 'hit' | 'spark';
+export type ParticleType = 'fire' | 'water' | 'earth' | 'wind' | 'light' | 'dark' | 'hit' | 'spark';
 
 export interface ParticleConfig {
     x: number;
@@ -109,6 +111,18 @@ export interface InputState {
     right: boolean;
     attack: boolean;
     switchMode: boolean;
+}
+
+export interface CharacterSelectionOption {
+    type: CharacterType;
+    name: string;
+    description: string;
+    modes: [ElementalMode, ElementalMode];
+}
+
+export interface MatchCharacterSelection {
+    Player1: CharacterType;
+    Player2: CharacterType;
 }
 
 // ============================================

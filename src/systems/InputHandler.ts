@@ -20,6 +20,7 @@ export class InputHandler {
     private players: Map<PlayerId, PlayerInput> = new Map();
     private keyState: Map<string, boolean> = new Map();
     private switchModePressed: Map<PlayerId, boolean> = new Map();
+    private inputEnabled = true;
 
     constructor() {
         this.setupEventListeners();
@@ -64,9 +65,28 @@ export class InputHandler {
     }
 
     /**
+     * Enable/disable gameplay input dispatch.
+     */
+    setEnabled(enabled: boolean): void {
+        if (this.inputEnabled === enabled) {
+            return;
+        }
+
+        this.inputEnabled = enabled;
+
+        if (!enabled) {
+            this.clearAllInputState();
+        }
+    }
+
+    /**
      * Handle key down events
      */
     private handleKeyDown(event: KeyboardEvent): void {
+        if (!this.inputEnabled || this.shouldIgnoreKeyboardEvent(event)) {
+            return;
+        }
+
         // Prevent default for game keys
         if (this.isGameKey(event.code)) {
             event.preventDefault();
@@ -88,6 +108,10 @@ export class InputHandler {
      * Handle key up events
      */
     private handleKeyUp(event: KeyboardEvent): void {
+        if (!this.inputEnabled || this.shouldIgnoreKeyboardEvent(event)) {
+            return;
+        }
+
         // Track key state
         this.keyState.set(event.code, false);
 
@@ -154,6 +178,38 @@ export class InputHandler {
             ...Object.values(PLAYER2_KEYS),
         ];
         return allKeys.includes(keyCode);
+    }
+
+    private shouldIgnoreKeyboardEvent(event: KeyboardEvent): boolean {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        const tag = target.tagName;
+        return (
+            target.isContentEditable ||
+            tag === 'INPUT' ||
+            tag === 'TEXTAREA' ||
+            tag === 'SELECT'
+        );
+    }
+
+    private clearAllInputState(): void {
+        this.keyState.clear();
+        this.switchModePressed.forEach((_pressed, playerId) => {
+            this.switchModePressed.set(playerId, false);
+        });
+
+        this.players.forEach(({ character }) => {
+            character.inputFlags.left = false;
+            character.inputFlags.right = false;
+            character.inputFlags.up = false;
+            character.inputFlags.down = false;
+            character.inputFlags.attack = false;
+            character.inputFlags.moving = false;
+            character.velocity.x = 0;
+        });
     }
 
     /**

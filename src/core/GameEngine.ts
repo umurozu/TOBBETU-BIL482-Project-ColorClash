@@ -9,7 +9,7 @@ import { InputHandler } from '../systems/InputHandler';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
 import { GameHUD } from '../ui/GameHUD';
-import type { GameState, PlayerId } from '../types';
+import type { GameState, MatchCharacterSelection, PlayerId } from '../types';
 import {
     CANVAS_WIDTH,
     CANVAS_HEIGHT,
@@ -17,6 +17,13 @@ import {
     PLAYER1_START,
     PLAYER2_START
 } from '../constants/GameConfig';
+
+interface MatchFlowOptions {
+    autoRestartOnVictory?: boolean;
+    onMatchEnd?: (winner: PlayerId) => void;
+    victorySubtext?: string;
+    playerDisplayNames?: Partial<Record<PlayerId, string>>;
+}
 
 /**
  * GameEngine Singleton
@@ -56,6 +63,14 @@ export class GameEngine {
     private fps = 0;
     private frameCount = 0;
     private fpsUpdateTime = 0;
+    private autoRestartOnVictory = true;
+    private matchEndCallback: ((winner: PlayerId) => void) | null = null;
+    private victorySubtext = 'Restarting in 3 seconds...';
+    private restartTimeoutId: number | null = null;
+    private playerDisplayNames: Record<PlayerId, string> = {
+        Player1: 'Player 1',
+        Player2: 'Player 2',
+    };
 
     /**
      * Private constructor for Singleton pattern
@@ -98,13 +113,42 @@ export class GameEngine {
     /**
      * Initialize the game
      */
-    init(): void {
+    init(
+        selection: MatchCharacterSelection = {
+            Player1: 'Fighter',
+            Player2: 'Fighter',
+        },
+        flowOptions: MatchFlowOptions = {}
+    ): void {
+        this.autoRestartOnVictory = flowOptions.autoRestartOnVictory ?? true;
+        this.matchEndCallback = flowOptions.onMatchEnd ?? null;
+        this.victorySubtext = flowOptions.victorySubtext ??
+            (this.autoRestartOnVictory ? 'Restarting in 3 seconds...' : 'Preparing next match...');
+        this.playerDisplayNames = {
+            Player1: flowOptions.playerDisplayNames?.Player1?.trim() || 'Player 1',
+            Player2: flowOptions.playerDisplayNames?.Player2?.trim() || 'Player 2',
+        };
+
+        if (this.restartTimeoutId !== null) {
+            clearTimeout(this.restartTimeoutId);
+            this.restartTimeoutId = null;
+        }
+
         // Create players using Factory pattern
-        [this.player1, this.player2] = CharacterFactory.createMatchPlayers();
+        [this.player1, this.player2] = CharacterFactory.createMatchPlayers(
+            selection.Player1,
+            selection.Player2
+        );
 
         // Register players with input handler
         this.inputHandler.registerPlayer(this.player1);
         this.inputHandler.registerPlayer(this.player2);
+        this.inputHandler.setEnabled(true);
+
+        // Clear visuals carried over from previous match init calls
+        this.particleSystem.clear();
+        this.hud.reset();
+        this.hud.setPlayerDisplayNames(this.playerDisplayNames);
 
         // Subscribe HUD to player events (Observer pattern)
         this.hud.subscribeToCharacter(this.player1);
@@ -119,8 +163,12 @@ export class GameEngine {
         };
 
         console.log('Game initialized');
-        console.log('Player 1: WASD to move, F to attack, G to switch mode');
-        console.log('Player 2: Arrow keys to move, K to attack, L to switch mode');
+        console.log(
+            `Player 1: ${CharacterFactory.getCharacterName(selection.Player1)} | WASD move, F attack, G switch`
+        );
+        console.log(
+            `Player 2: ${CharacterFactory.getCharacterName(selection.Player2)} | Arrows move, K attack, L switch`
+        );
     }
 
     /**
@@ -141,9 +189,15 @@ export class GameEngine {
      */
     stop(): void {
         this.isRunning = false;
+        this.inputHandler.setEnabled(false);
         if (this.animationFrameId !== null) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
+        }
+
+        if (this.restartTimeoutId !== null) {
+            clearTimeout(this.restartTimeoutId);
+            this.restartTimeoutId = null;
         }
     }
 
@@ -260,12 +314,18 @@ export class GameEngine {
      * Show victory screen
      */
     private showVictory(winner: PlayerId): void {
-        console.log(`${winner} wins!`);
+        const winnerName = this.playerDisplayNames[winner];
+        console.log(`${winnerName} wins!`);
+        this.inputHandler.setEnabled(false);
+        this.matchEndCallback?.(winner);
 
-        // Auto restart after delay
-        setTimeout(() => {
-            this.restart();
-        }, 3000);
+        // Auto restart after delay (normal mode)
+        if (this.autoRestartOnVictory) {
+            this.restartTimeoutId = window.setTimeout(() => {
+                this.restart();
+                this.restartTimeoutId = null;
+            }, 3000);
+        }
     }
 
     /**
@@ -289,6 +349,8 @@ export class GameEngine {
             winner: null,
             roundTime: 0,
         };
+
+        this.inputHandler.setEnabled(true);
 
         console.log('Game restarted');
     }
@@ -396,8 +458,12 @@ export class GameEngine {
         this.ctx.textAlign = 'center';
         this.ctx.shadowColor = this.gameState.winner === 'Player1' ? '#ff6b6b' : '#4ecdc4';
         this.ctx.shadowBlur = 20;
+        const winnerName = this.gameState.winner
+            ? this.playerDisplayNames[this.gameState.winner]
+            : 'Unknown';
+
         this.ctx.fillText(
-            `${this.gameState.winner} WINS!`,
+            `${winnerName} WINS!`,
             CANVAS_WIDTH / 2,
             CANVAS_HEIGHT / 2
         );
@@ -406,11 +472,7 @@ export class GameEngine {
         this.ctx.font = '20px Arial';
         this.ctx.shadowBlur = 0;
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        this.ctx.fillText(
-            'Restarting in 3 seconds...',
-            CANVAS_WIDTH / 2,
-            CANVAS_HEIGHT / 2 + 50
-        );
+        this.ctx.fillText(this.victorySubtext, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50);
         this.ctx.restore();
     }
 
@@ -431,8 +493,10 @@ export class GameEngine {
         );
 
         if (this.player1 && this.player2) {
+            const player1Name = this.playerDisplayNames.Player1;
+            const player2Name = this.playerDisplayNames.Player2;
             this.ctx.fillText(
-                `P1: ${this.player1.getStateName()} (${this.player1.getModeName()}) | P2: ${this.player2.getStateName()} (${this.player2.getModeName()})`,
+                `${player1Name}: ${this.player1.getStateName()} (${this.player1.getModeName()}) | ${player2Name}: ${this.player2.getStateName()} (${this.player2.getModeName()})`,
                 CANVAS_WIDTH - 10,
                 CANVAS_HEIGHT - 50
             );
@@ -473,6 +537,13 @@ export class GameEngine {
      */
     getGameState(): GameState {
         return { ...this.gameState };
+    }
+
+    /**
+     * Enable/disable gameplay controls.
+     */
+    setInputEnabled(enabled: boolean): void {
+        this.inputHandler.setEnabled(enabled);
     }
 
     /**
