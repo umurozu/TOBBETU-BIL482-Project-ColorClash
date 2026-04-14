@@ -14,7 +14,7 @@ export class ObjectPool<T extends IPoolable> {
 
     constructor(
         private readonly factory: () => T,
-        private readonly initialSize: number = 10
+        initialSize: number = 10
     ) {
         this.prewarm(initialSize);
     }

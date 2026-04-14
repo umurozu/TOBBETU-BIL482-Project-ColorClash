@@ -5,7 +5,6 @@
 
 import type { ICharacterState } from './ICharacterState';
 import type { Character } from '../../entities/Character';
-import { CHARACTER_SPEED, JUMP_FORCE } from '../../constants/GameConfig';
 
 export class MoveState implements ICharacterState {
     readonly name = 'move';
@@ -27,12 +26,20 @@ export class MoveState implements ICharacterState {
             character.facingRight = true;
         }
 
-        character.velocity.x = moveX * CHARACTER_SPEED;
+        character.velocity.x = moveX * character.getMovementSpeed();
 
-        // Handle jump
-        if (character.inputFlags.up && character.isGrounded) {
-            character.velocity.y = JUMP_FORCE;
-            character.isGrounded = false;
+        // Handle jump / flight
+        if (character.inputFlags.up) {
+            if (character.isGrounded) {
+                character.velocity.y = character.getJumpForce();
+                character.isGrounded = false;
+            } else if (character.canFlyInCurrentMode()) {
+                character.velocity.y = Math.min(character.velocity.y, -character.getFlightLift());
+            }
+        }
+
+        if (character.inputFlags.down && character.canFlyInCurrentMode() && !character.isGrounded) {
+            character.velocity.y += 320 * deltaTime;
         }
 
         // Apply gravity

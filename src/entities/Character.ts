@@ -5,6 +5,8 @@
 
 import type {
     PlayerId,
+    CharacterType,
+    ElementalMode,
     Vector2,
     KeyBindings,
     Rectangle,
@@ -14,15 +16,17 @@ import type {
 } from '../types';
 import type { IElementalMode } from '../patterns/strategy/IElementalMode';
 import type { ICharacterState } from '../patterns/state/ICharacterState';
-import { FireModeStrategy, WaterModeStrategy } from '../patterns/strategy';
 import { IdleState, MoveState, AttackState, HitState } from '../patterns/state';
 import { Subject } from '../patterns/observer/Observer';
 import { Hitbox } from './Hitbox';
 import {
+    ABSORBED_DAMAGE_BONUS_CAP,
     CHARACTER_WIDTH,
     CHARACTER_HEIGHT,
+    CHARACTER_SPEED,
     GROUND_Y,
     GRAVITY,
+    JUMP_FORCE,
     MAX_HEALTH,
     ATTACK_COOLDOWN,
     ATTACK_WIDTH,
@@ -60,7 +64,7 @@ export interface CharacterStates {
 export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     // Identity
     readonly playerId: PlayerId;
-    readonly characterType: string;
+    readonly characterType: CharacterType;
     readonly keyBindings: KeyBindings;
 
     // Transform
@@ -78,14 +82,15 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     isHitStunned = false;
     lastHitStun = 0;
     private attackHitbox: Hitbox | null = null;
+    private absorbedDamageBonus = 0;
 
     // Physics
     isGrounded = true;
 
     // Strategy Pattern: Current elemental mode
     private elementalMode: IElementalMode;
-    private readonly fireModeStrategy: IElementalMode;
-    private readonly waterModeStrategy: IElementalMode;
+    private readonly modeStrategies: [IElementalMode, IElementalMode];
+    private currentModeIndex = 0;
 
     // State Pattern: Current state and available states
     private currentState: ICharacterState;
@@ -106,10 +111,11 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
 
     constructor(
         playerId: PlayerId,
-        characterType: string,
+        characterType: CharacterType,
         position: Vector2,
         keyBindings: KeyBindings,
-        facingRight: boolean
+        facingRight: boolean,
+        modes: [IElementalMode, IElementalMode]
     ) {
         super();
 
@@ -120,9 +126,8 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
         this.facingRight = facingRight;
 
         // Initialize strategies (Strategy Pattern)
-        this.fireModeStrategy = new FireModeStrategy();
-        this.waterModeStrategy = new WaterModeStrategy();
-        this.elementalMode = this.fireModeStrategy; // Start in Fire mode
+        this.modeStrategies = modes;
+        this.elementalMode = this.modeStrategies[0];
 
         // Initialize states (State Pattern)
         this.states = {
@@ -176,18 +181,21 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     switchElementalMode(): void {
         if (this.isAttacking || this.isHitStunned) return;
 
-        // Toggle between Fire and Water
-        if (this.elementalMode === this.fireModeStrategy) {
-            this.elementalMode = this.waterModeStrategy;
-        } else {
-            this.elementalMode = this.fireModeStrategy;
-        }
+        const nextIndex = (this.currentModeIndex + 1) % this.modeStrategies.length;
+        this.setMode(nextIndex, true);
+    }
 
-        // Notify observers of mode change
-        this.notify({
-            playerId: this.playerId,
-            newMode: this.elementalMode.name as 'Fire' | 'Water',
-        } as ModeChangeEvent);
+    private setMode(modeIndex: number, notifyObservers: boolean): void {
+        const selectedMode = this.modeStrategies[modeIndex] ?? this.modeStrategies[0];
+        this.currentModeIndex = selectedMode === this.modeStrategies[0] ? 0 : 1;
+        this.elementalMode = selectedMode;
+
+        if (notifyObservers) {
+            this.notify({
+                playerId: this.playerId,
+                newMode: this.elementalMode.name,
+            } as ModeChangeEvent);
+        }
     }
 
     /**
@@ -200,8 +208,36 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     /**
      * Get current mode name
      */
-    getModeName(): string {
+    getModeName(): ElementalMode {
         return this.elementalMode.name;
+    }
+
+    /**
+     * Get mode-adjusted horizontal movement speed
+     */
+    getMovementSpeed(): number {
+        return CHARACTER_SPEED * this.elementalMode.moveSpeedMultiplier;
+    }
+
+    /**
+     * Get mode-adjusted jump force
+     */
+    getJumpForce(): number {
+        return JUMP_FORCE * this.elementalMode.jumpForceMultiplier;
+    }
+
+    /**
+     * Check if current mode allows in-air lift
+     */
+    canFlyInCurrentMode(): boolean {
+        return this.elementalMode.canFly;
+    }
+
+    /**
+     * Get lift force used in wind-like modes
+     */
+    getFlightLift(): number {
+        return this.elementalMode.flightLift;
     }
 
     /**
@@ -209,7 +245,7 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
      */
     applyGravity(deltaTime: number): void {
         if (!this.isGrounded) {
-            this.velocity.y += GRAVITY * deltaTime;
+            this.velocity.y += GRAVITY * this.elementalMode.gravityMultiplier * deltaTime;
         }
     }
 
@@ -273,17 +309,19 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     updateAttackHitbox(): void {
         if (!this.attackHitbox) return;
 
+        const attackWidth = ATTACK_WIDTH * this.elementalMode.attackRangeMultiplier;
+        const attackHeight = ATTACK_HEIGHT * this.elementalMode.attackHeightMultiplier;
         const hitboxX = this.facingRight
             ? this.position.x + this.width
-            : this.position.x - ATTACK_WIDTH;
+            : this.position.x - attackWidth;
 
-        const hitboxY = this.position.y + this.height / 2 - ATTACK_HEIGHT / 2;
+        const hitboxY = this.position.y + this.height / 2 - attackHeight / 2;
 
         this.attackHitbox.init(
             hitboxX,
             hitboxY,
-            ATTACK_WIDTH,
-            ATTACK_HEIGHT,
+            attackWidth,
+            attackHeight,
             this.playerId,
             this.elementalMode.damageMultiplier * 10
         );
@@ -370,6 +408,26 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
     }
 
     /**
+     * Store absorbed damage as bonus for Light mode attacks.
+     */
+    storeAbsorbedDamageBonus(amount: number): void {
+        if (amount <= 0) return;
+        this.absorbedDamageBonus = Math.min(
+            ABSORBED_DAMAGE_BONUS_CAP,
+            this.absorbedDamageBonus + amount
+        );
+    }
+
+    /**
+     * Consume all stored absorbed damage bonus.
+     */
+    consumeAbsorbedDamageBonus(): number {
+        const bonus = this.absorbedDamageBonus;
+        this.absorbedDamageBonus = 0;
+        return bonus;
+    }
+
+    /**
      * Check if character is defeated
      */
     isDefeated(): boolean {
@@ -388,6 +446,8 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
         this.isHitStunned = false;
         this.attackCooldownTimer = 0;
         this.attackHitbox = null;
+        this.absorbedDamageBonus = 0;
+        this.setMode(0, true);
 
         // Reset to idle state
         this.transitionTo(this.states.idle);
@@ -436,25 +496,81 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
         // Example: ctx.drawImage(this.sprite, this.position.x, this.position.y, this.width, this.height);
         // =====================================================
 
-        // Main body (colored rectangle placeholder)
+        // Main body shape by active mode
         ctx.fillStyle = visualConfig.primaryColor;
-        ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+        if (this.elementalMode.form === 'armored') {
+            ctx.fillRect(this.position.x, this.position.y + 6, this.width, this.height - 6);
+            ctx.fillRect(this.position.x - 4, this.position.y + 24, this.width + 8, this.height - 34);
+        } else if (this.elementalMode.form === 'fluid') {
+            ctx.beginPath();
+            ctx.moveTo(this.position.x + 12, this.position.y);
+            ctx.lineTo(this.position.x + this.width - 12, this.position.y);
+            ctx.quadraticCurveTo(
+                this.position.x + this.width,
+                this.position.y,
+                this.position.x + this.width,
+                this.position.y + 16
+            );
+            ctx.lineTo(this.position.x + this.width, this.position.y + this.height - 12);
+            ctx.quadraticCurveTo(
+                this.position.x + this.width,
+                this.position.y + this.height,
+                this.position.x + this.width - 12,
+                this.position.y + this.height
+            );
+            ctx.lineTo(this.position.x + 12, this.position.y + this.height);
+            ctx.quadraticCurveTo(
+                this.position.x,
+                this.position.y + this.height,
+                this.position.x,
+                this.position.y + this.height - 16
+            );
+            ctx.lineTo(this.position.x, this.position.y + 12);
+            ctx.quadraticCurveTo(
+                this.position.x,
+                this.position.y,
+                this.position.x + 12,
+                this.position.y
+            );
+            ctx.fill();
+        } else if (this.elementalMode.form === 'aerial') {
+            ctx.beginPath();
+            ctx.moveTo(this.position.x + this.width / 2, this.position.y);
+            ctx.lineTo(this.position.x + this.width, this.position.y + this.height / 2);
+            ctx.lineTo(this.position.x + this.width / 2, this.position.y + this.height);
+            ctx.lineTo(this.position.x, this.position.y + this.height / 2);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+        }
 
         // Secondary color accent
         ctx.fillStyle = visualConfig.secondaryColor;
-        ctx.fillRect(
-            this.position.x + 10,
-            this.position.y + 10,
-            this.width - 20,
-            30
-        );
+        if (this.elementalMode.form === 'aerial') {
+            ctx.fillRect(this.position.x + 6, this.position.y + this.height / 2 - 8, this.width - 12, 16);
+            ctx.fillRect(this.position.x + this.width / 2 - 8, this.position.y + 8, 16, this.height - 16);
+        } else if (this.elementalMode.form === 'armored') {
+            ctx.fillRect(this.position.x + 8, this.position.y + 14, this.width - 16, 26);
+            ctx.fillRect(this.position.x + 20, this.position.y + 52, this.width - 40, this.height - 68);
+        } else {
+            ctx.fillRect(
+                this.position.x + 10,
+                this.position.y + 10,
+                this.width - 20,
+                30
+            );
+        }
 
         // Draw face direction indicator
         const eyeX = this.facingRight
             ? this.position.x + this.width - 20
             : this.position.x + 10;
+        const eyeY = this.elementalMode.form === 'aerial'
+            ? this.position.y + this.height / 2 - 18
+            : this.position.y + 25;
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(eyeX, this.position.y + 25, 10, 10);
+        ctx.fillRect(eyeX, eyeY, 10, 10);
 
         // =====================================================
         // ATTACK ANIMATION - Replace with attack sprite
@@ -465,13 +581,35 @@ export class Character extends Subject<HealthChangeEvent | ModeChangeEvent> {
             ctx.fillStyle = `${visualConfig.primaryColor}88`;
             ctx.shadowBlur = 30;
 
-            // Attack slash effect
-            ctx.fillRect(
-                this.attackHitbox.x,
-                this.attackHitbox.y,
-                this.attackHitbox.width,
-                this.attackHitbox.height
-            );
+            if (this.elementalMode.attackEffect === 'beam') {
+                const beamHeight = Math.max(8, this.attackHitbox.height);
+                const beamY = this.attackHitbox.y + this.attackHitbox.height / 2 - beamHeight / 2;
+                const beamGradient = ctx.createLinearGradient(
+                    this.attackHitbox.x,
+                    beamY,
+                    this.attackHitbox.x + this.attackHitbox.width,
+                    beamY
+                );
+                beamGradient.addColorStop(0, `${visualConfig.primaryColor}66`);
+                beamGradient.addColorStop(0.5, `${visualConfig.secondaryColor}ff`);
+                beamGradient.addColorStop(1, `${visualConfig.primaryColor}66`);
+
+                ctx.fillStyle = beamGradient;
+                ctx.fillRect(
+                    this.attackHitbox.x,
+                    beamY,
+                    this.attackHitbox.width,
+                    beamHeight
+                );
+            } else {
+                // Attack slash effect
+                ctx.fillRect(
+                    this.attackHitbox.x,
+                    this.attackHitbox.y,
+                    this.attackHitbox.width,
+                    this.attackHitbox.height
+                );
+            }
         }
 
         // Draw hit flash when stunned

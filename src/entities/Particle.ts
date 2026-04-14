@@ -93,12 +93,23 @@ export class Particle implements IPoolable {
         // Apply gravity based on type
         if (this.type === 'fire') {
             this.velocityY -= 50 * deltaTime; // Rise up
+            this.velocityX *= 0.99;
+        } else if (this.type === 'wind') {
+            this.velocityY += 45 * deltaTime; // Glide slowly downward
+            this.velocityX *= 1.01;
+        } else if (this.type === 'light') {
+            this.velocityY -= 20 * deltaTime;
+            this.velocityX *= 1.015;
+        } else if (this.type === 'dark') {
+            this.velocityY += 130 * deltaTime;
+            this.velocityX *= 0.95;
+        } else if (this.type === 'earth') {
+            this.velocityY += 280 * deltaTime; // Heavy fall
+            this.velocityX *= 0.93;
         } else {
             this.velocityY += 200 * deltaTime; // Fall down
+            this.velocityX *= 0.98;
         }
-
-        // Apply friction
-        this.velocityX *= 0.98;
 
         // Update visual properties
         this.rotation += this.rotationSpeed * deltaTime;
@@ -145,6 +156,46 @@ export class Particle implements IPoolable {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.beginPath();
                 ctx.arc(-renderSize * 0.2, -renderSize * 0.2, renderSize * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+
+            case 'earth':
+                // Earth: rock chunks
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-renderSize * 0.6, -renderSize * 0.6, renderSize * 1.2, renderSize * 1.2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(-renderSize * 0.4, -renderSize * 0.4, renderSize * 0.5, renderSize * 0.5);
+                break;
+
+            case 'wind':
+                // Wind: streak
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = Math.max(1, renderSize * 0.25);
+                ctx.beginPath();
+                ctx.moveTo(-renderSize, 0);
+                ctx.quadraticCurveTo(0, -renderSize * 0.4, renderSize, 0);
+                ctx.stroke();
+                break;
+
+            case 'light':
+                // Light: thin beam shard
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = Math.max(1, renderSize * 0.2);
+                ctx.beginPath();
+                ctx.moveTo(-renderSize, -renderSize * 0.2);
+                ctx.lineTo(renderSize, renderSize * 0.2);
+                ctx.stroke();
+                break;
+
+            case 'dark':
+                // Dark: dense orb
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, renderSize * 0.65, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+                ctx.beginPath();
+                ctx.arc(renderSize * 0.2, renderSize * 0.1, renderSize * 0.3, 0, Math.PI * 2);
                 ctx.fill();
                 break;
 

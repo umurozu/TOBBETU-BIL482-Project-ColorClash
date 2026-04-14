@@ -6,7 +6,15 @@
 import { Particle } from '../entities/Particle';
 import { ObjectPool } from '../patterns/pool/ObjectPool';
 import type { ParticleType, Vector2 } from '../types';
-import { PARTICLE_POOL_SIZE, FIRE_VISUAL, WATER_VISUAL } from '../constants/GameConfig';
+import {
+    DARK_VISUAL,
+    PARTICLE_POOL_SIZE,
+    EARTH_VISUAL,
+    FIRE_VISUAL,
+    LIGHT_VISUAL,
+    WATER_VISUAL,
+    WIND_VISUAL
+} from '../constants/GameConfig';
 
 export class ParticleSystem {
     private pool: ObjectPool<Particle>;
@@ -77,6 +85,14 @@ export class ParticleSystem {
                 return FIRE_VISUAL.particleColors;
             case 'water':
                 return WATER_VISUAL.particleColors;
+            case 'earth':
+                return EARTH_VISUAL.particleColors;
+            case 'wind':
+                return WIND_VISUAL.particleColors;
+            case 'light':
+                return LIGHT_VISUAL.particleColors;
+            case 'dark':
+                return DARK_VISUAL.particleColors;
             case 'hit':
                 return ['#ffffff', '#ffff00', '#ffcc00'];
             default:
