@@ -6,7 +6,8 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "test:smoke": "node test/automated-smoke.test.cjs"
     },
     "devDependencies": {
         "@types/node": "^22.0.0",
